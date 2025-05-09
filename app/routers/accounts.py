@@ -1,6 +1,5 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import Field
-from sqlalchemy import func
 from sqlmodel import select
 from starlette.status import HTTP_404_NOT_FOUND
 
@@ -28,26 +27,20 @@ class Account(AccountRequest):
     id: str = Field(min_length=1)
 
 
-class AccountSynopsis(ApiBase):
-    id: str = Field(min_length=1)
-    name: str = Field(min_length=1)
-    users_count: int
-
-
-@routers.get('/', response_model=list[AccountSynopsis])
+@routers.get('/', response_model=list[Account])
 async def get_accounts(db: DBSessionDep, authUser: AuthUserDep):
-    """Returns all account synopses belonging to user"""
-    result = db.exec(
-        select(core.Account.pub_id, core.Account.name, func.count(core.AccountUser.account_id))
-        .join(core.AccountUser)
+    """Returns all accounts belonging to user"""
+    accounts = db.exec(
+        select(core.Account)
         .where(core.Account.owner_id == authUser.id)
         .group_by(core.Account.id)
     ).all()
-    return [AccountSynopsis(
-        id=id,
-        name=name,
-        users_count=users_count
-    ) for id, name, users_count in result]
+
+    return [Account(
+        id=a.pub_id,
+        name=a.name,
+        users=[AccountUser(name=u.name, mask=u.mask) for u in a.users]
+    ) for a in accounts]
 
 
 @routers.get('/{id}', response_model=Account)
