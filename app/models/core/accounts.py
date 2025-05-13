@@ -39,6 +39,8 @@ class AccountUser(CoreBase, table=True):
     account_id: int = Field(foreign_key=f'{SCHEMA_NAME}.account.id', ondelete='CASCADE')
     account: Account = Relationship(back_populates='users')
 
+    entries: list[TransactionEntry] = Relationship(back_populates='account_user')
+
     @declared_attr
     def __table_args__(cls):
         return table_args(cls, (
