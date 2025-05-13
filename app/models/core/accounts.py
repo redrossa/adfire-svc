@@ -1,12 +1,12 @@
 from nanoid import generate
-from pydantic import BaseModel
 from sqlalchemy import UniqueConstraint
 from sqlalchemy.orm import declared_attr
 from sqlmodel import Field, Relationship
 
 from app.models._utils import table_args
-from app.models.core.base import CoreBase, SCHEMA_NAME
 from app.models.auth import SCHEMA_NAME as AUTH_SCHEMA_NAME
+from app.models.core.base import CoreBase, SCHEMA_NAME
+from app.models.core.transactions import TransactionEntry
 
 
 class Account(CoreBase, table=True):
@@ -15,6 +15,7 @@ class Account(CoreBase, table=True):
     id: int = Field(primary_key=True)
     pub_id: str = Field(index=True, unique=True, default_factory=generate)
     name: str
+    is_merchant: bool = Field(default=False)
 
     users: list['AccountUser'] = Relationship(back_populates='account', cascade_delete=True)
 
@@ -31,6 +32,7 @@ class AccountUser(CoreBase, table=True):
     __tablename__ = 'account_user'
 
     id: int = Field(primary_key=True)
+    pub_id: str = Field(index=True, unique=True, default_factory=generate)
     name: str
     mask: str
 

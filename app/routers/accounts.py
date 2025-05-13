@@ -1,5 +1,7 @@
+from typing import Self
+
 from fastapi import APIRouter, HTTPException
-from pydantic import Field
+from pydantic import Field, model_validator
 from sqlmodel import select
 from starlette.status import HTTP_404_NOT_FOUND
 
@@ -13,43 +15,83 @@ routers = APIRouter(
 )
 
 
-class AccountUser(ApiBase):
+class AccountUserBody(ApiBase):
     name: str = Field(min_length=1)
     mask: str = Field(min_length=1)
 
 
-class AccountRequest(ApiBase):
+class AccountUser(AccountUserBody):
+    id: str | None = Field(default=None)
+
+
+class AccountBody(ApiBase):
     name: str = Field(min_length=1)
+    is_merchant: bool = Field(default=False)
+    users: list[AccountUserBody] = Field(min_length=1)
+
+    @model_validator(mode='after')
+    def check_no_duplicate_user_masks(self) -> Self:
+        unique_masks = set(u.mask for u in self.users)
+        if len(unique_masks) != len(self.users):
+            raise ValueError('Contains duplicate masks')
+        return self
+
+
+class AccountBodyUpdate(AccountBody):
+    users: list[AccountUser] = Field(min_length=1)
+
+    @model_validator(mode='after')
+    def check_no_duplicate_user_ids(self) -> Self:
+        ids = [u.id for u in self.users]
+        unique_ids = set(ids)
+        if len(unique_ids) != len(ids):
+            raise ValueError('Contains duplicate IDs')
+        return self
+
+
+class Account(AccountBody):
+    id: str = Field(min_length=1)
     users: list[AccountUser] = Field(min_length=1)
 
 
-class Account(AccountRequest):
-    id: str = Field(min_length=1)
-
-
 @routers.get('/', response_model=list[Account])
-async def get_accounts(db: DBSessionDep, authUser: AuthUserDep):
+async def get_accounts(
+        db: DBSessionDep,
+        auth_user: AuthUserDep,
+        include_merchants: bool = False,
+):
     """Returns all accounts belonging to user"""
-    accounts = db.exec(
-        select(core.Account)
-        .where(core.Account.owner_id == authUser.id)
-        .group_by(core.Account.id)
-    ).all()
+    stmt = select(core.Account).where(core.Account.owner_id == auth_user.id)
+
+    if not include_merchants:
+        stmt = stmt.where(core.Account.is_merchant == False)
+
+    accounts = db.exec(stmt).all()
 
     return [Account(
         id=a.pub_id,
         name=a.name,
-        users=[AccountUser(name=u.name, mask=u.mask) for u in a.users]
+        is_merchant=a.is_merchant,
+        users=[AccountUser(id=u.pub_id, name=u.name, mask=u.mask) for u in a.users]
     ) for a in accounts]
 
 
 @routers.get('/{id}', response_model=Account)
-async def get_account(id: str, db: DBSessionDep, authUser: AuthUserDep):
+async def get_account(
+        id: str,
+        db: DBSessionDep, auth_user:
+        AuthUserDep,
+        include_merchants: bool = False,
+):
     """Returns an account by {id} belonging to user"""
-    account = db.exec(
-        select(core.Account)
-        .where(core.Account.owner_id == authUser.id, core.Account.pub_id == id)
-    ).one_or_none()
+    stmt = (select(core.Account)
+            .where(core.Account.owner_id == auth_user.id)
+            .where(core.Account.pub_id == id))
+
+    if not include_merchants:
+        stmt = stmt.where(core.Account.is_merchant == False)
+
+    account = db.exec(stmt).one_or_none()
 
     if not account:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail=f'Account "{id}" not found')
@@ -57,60 +99,89 @@ async def get_account(id: str, db: DBSessionDep, authUser: AuthUserDep):
     return Account(
         id=account.pub_id,
         name=account.name,
-        users=[AccountUser(name=u.name, mask=u.mask) for u in account.users]
+        is_merchant=account.is_merchant,
+        users=[AccountUser(id=u.pub_id, name=u.name, mask=u.mask) for u in account.users]
     )
 
 
 @routers.post('/', response_model=Account)
-async def create_account(accountRequest: AccountRequest, db: DBSessionDep, authUser: AuthUserDep):
+async def create_account(
+        account_body: AccountBody,
+        db: DBSessionDep,
+        auth_user: AuthUserDep
+):
     """Creates a new account for this user"""
-    users = [core.AccountUser(name=u.name, mask=u.mask) for u in accountRequest.users]
-    account = core.Account(name=accountRequest.name, users=users, owner_id=authUser.id)
+    users = [core.AccountUser(name=u.name, mask=u.mask) for u in account_body.users]
+    account = core.Account(name=account_body.name, users=users, owner_id=auth_user.id)
 
     db.add(account)
     db.commit()
 
     return Account(
-        id=str(account.pub_id),
+        id=account.pub_id,
         name=account.name,
-        users=[AccountUser(name=u.name, mask=u.mask) for u in account.users]
+        is_merchant=account.is_merchant,
+        users=[AccountUser(id=u.pub_id, name=u.name, mask=u.mask) for u in account.users]
     )
 
 
 @routers.put('/{id}', response_model=Account)
-async def upsert_account(id: str, accountRequest: AccountRequest, db: DBSessionDep, authUser: AuthUserDep):
+async def upsert_account(
+        id: str,
+        account_body: AccountBodyUpdate,
+        db: DBSessionDep,
+        auth_user: AuthUserDep
+):
     """
     Replaces the account by {id} with {accountRequest} if it exists,
     otherwise inserts a new account by {id}
     """
-    account = db.exec(
-        select(core.Account)
-        .where(core.Account.owner_id == authUser.id, core.Account.pub_id == id)
-    ).one_or_none()
+    stmt = (select(core.Account)
+            .where(core.Account.owner_id == auth_user.id)
+            .where(core.Account.pub_id == id))
+
+    account = db.exec(stmt).one_or_none()
 
     if not account:
-        # account doesn't exist => create it
-        return create_account(accountRequest, db, authUser)
+        # account doesn't exist => create it with provided public id
+        users = [core.AccountUser(pub_id=u.id, name=u.name, mask=u.mask) for u in account_body.users]
+        account = core.Account(pub_id=id, name=account_body.name, users=users, owner_id=auth_user.id)
+
+        db.add(account)
+        db.commit()
+
+        return Account(
+            id=account.pub_id,
+            name=account.name,
+            is_merchant=account.is_merchant,
+            users=[AccountUser(id=u.pub_id, name=u.name, mask=u.mask) for u in account.users]
+        )
 
     # account exists => replace it
-    existing_by_mask = {u.mask: u for u in account.users}
-    incoming_masks = {u.mask for u in accountRequest.users}
+    account.name = account_body.name
 
-    for u in accountRequest.users:
-        mask = u.mask
-        name = u.name
-        if mask in existing_by_mask:
-            existing_by_mask[mask].name = name
+    old_users = {u.pub_id: u for u in account.users}
+    new_users_by_id = {u.id: u for u in account_body.users}
+    new_users_by_mask = {u.mask: u for u in account_body.users}
+
+    for uid, new_user in new_users_by_id.items():
+        # iterate through account users to update or create
+        if uid in old_users:
+            # update name and mask
+            old_users[uid].name = new_user.name
+            old_users[uid].mask = new_user.mask
         else:
             db.add(core.AccountUser(
-                name=name,
-                mask=mask,
+                pub_id=uid,
+                name=new_user.name,
+                mask=new_user.mask,
                 account_id=account.id
             ))
 
-    for mask, u in existing_by_mask.items():
-        if mask not in incoming_masks:
-            db.delete(u)
+    for uid, old_user in old_users.items():
+        # iterate through account users to update or delete
+        if uid not in new_users_by_id:
+            db.delete(old_user)
 
     db.add(account)
     db.commit()
@@ -119,17 +190,23 @@ async def upsert_account(id: str, accountRequest: AccountRequest, db: DBSessionD
     return Account(
         id=account.pub_id,
         name=account.name,
-        users=[AccountUser(name=u.name, mask=u.mask) for u in account.users],
+        is_merchant=account.is_merchant,
+        users=[AccountUser(id=u.pub_id, name=u.name, mask=u.mask) for u in account.users],
     )
 
 
 @routers.delete('/{id}')
-async def delete_account(id: str, db: DBSessionDep, authUser: AuthUserDep):
+async def delete_account(
+        id: str,
+        db: DBSessionDep,
+        auth_user: AuthUserDep
+):
     """Removes the account by {id} belonging to the user"""
-    account = db.exec(
-        select(core.Account)
-        .where(core.Account.owner_id == authUser.id, core.Account.pub_id == id)
-    ).one_or_none()
+    stmt = (select(core.Account)
+            .where(core.Account.owner_id == auth_user.id)
+            .where(core.Account.pub_id == id))
+
+    account = db.exec(stmt).one_or_none()
 
     if not account:
         raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail=f'Account "{id}" not found')
