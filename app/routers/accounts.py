@@ -91,10 +91,7 @@ async def get_account(
     if not include_merchants:
         stmt = stmt.where(core.Account.is_merchant == False)
 
-    account = db.exec(stmt).one_or_none()
-
-    if not account:
-        raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail=f'Account "{id}" not found')
+    account = db.exec(stmt).one()
 
     return Account(
         id=account.pub_id,
@@ -162,7 +159,6 @@ async def upsert_account(
 
     old_users = {u.pub_id: u for u in account.users}
     new_users_by_id = {u.id: u for u in account_body.users}
-    new_users_by_mask = {u.mask: u for u in account_body.users}
 
     for uid, new_user in new_users_by_id.items():
         # iterate through account users to update or create
@@ -206,10 +202,7 @@ async def delete_account(
             .where(core.Account.owner_id == auth_user.id)
             .where(core.Account.pub_id == id))
 
-    account = db.exec(stmt).one_or_none()
-
-    if not account:
-        raise HTTPException(status_code=HTTP_404_NOT_FOUND, detail=f'Account "{id}" not found')
+    account = db.exec(stmt).one()
 
     db.delete(account)
     db.commit()
