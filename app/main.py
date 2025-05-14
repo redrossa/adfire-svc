@@ -22,5 +22,5 @@ app.include_router(accounts.routers)
 
 
 @app.get('/whoami')
-async def whoami(authUser: AuthUserDep):
-    return authUser
+async def whoami(auth_user: AuthUserDep):
+    return auth_user
