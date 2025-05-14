@@ -32,15 +32,17 @@ Currently providing mock API routes for [adfire-web](https://github.com/redrossa
    pip install alembic
    ```
 
-3. Create database `adfire` in your Postgres server 
+2. Create database `adfire` in your Postgres server
 
-2. Set database URL in `alembic.ini`
+3. Inside `adfire`, create schemas `authjs` and `core`
+
+4. Set database URL in `alembic.ini`
 
    ```toml
    sqlalchemy.url = # postgresql://<username>:<password>@localhost:5432/adfire
    ```
 
-3. Run migrations
+5. Run migrations
 
    - To run initial migration
 
@@ -54,7 +56,7 @@ Currently providing mock API routes for [adfire-web](https://github.com/redrossa
      alembic revision -m "<MESSAGE>"
      ```
 
-4. Apply changes to Postgres
+6. Apply changes to Postgres
 
    ```shell
    alembic upgrade head
