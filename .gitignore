@@ -1,2 +1,4 @@
 .env*
 !.env.example
+/alembic/versions/
+!/alembic/versions/.gitkeep
