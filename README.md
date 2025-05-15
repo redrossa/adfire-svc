@@ -1,6 +1,6 @@
 # Adfire Server
 
-Currently providing mock API routes for [adfire-web](https://github.com/redrossa/adfire-web).
+Backend for [adfire-web](https://github.com/redrossa/adfire-web).
 
 ## Getting started
 
@@ -60,4 +60,24 @@ Currently providing mock API routes for [adfire-web](https://github.com/redrossa
 
    ```shell
    alembic upgrade head
+   ```
+
+## Run Tests
+
+1. Install `httpx`
+
+   ```shell
+   pip install httpx
+   ```
+
+2. Populate environment variables
+
+   ```shell
+   cp .env.example .env.test
+   ```
+
+3. Run pytest
+
+   ```shell
+   pytest
    ```
