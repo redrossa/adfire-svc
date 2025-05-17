@@ -17,7 +17,7 @@ class Account(CoreBase, table=True):
     name: str
     is_merchant: bool = Field(default=False)
 
-    users: list['AccountUser'] = Relationship(back_populates='account', cascade_delete=True)
+    users: list['AccountUser'] = Relationship(back_populates='account', cascade_delete=True, sa_relationship_kwargs={'order_by': 'AccountUser.order'})
 
     owner_id: str = Field(foreign_key=f'{AUTH_SCHEMA_NAME}.user.id', ondelete='CASCADE')
 
@@ -35,6 +35,7 @@ class AccountUser(CoreBase, table=True):
     pub_id: str = Field(index=True, unique=True, default_factory=generate)
     name: str
     mask: str
+    order: int
 
     account_id: int = Field(foreign_key=f'{SCHEMA_NAME}.account.id', ondelete='CASCADE')
     account: Account = Relationship(back_populates='users')

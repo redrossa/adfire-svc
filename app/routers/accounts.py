@@ -1,9 +1,8 @@
 from typing import Self
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import Field, model_validator
 from sqlmodel import select
-from starlette.status import HTTP_404_NOT_FOUND
 
 from app.deps import DBSessionDep, AuthUserDep
 from app.models import core
@@ -108,7 +107,7 @@ async def create_account(
         auth_user: AuthUserDep
 ):
     """Creates a new account for this user"""
-    users = [core.AccountUser(name=u.name, mask=u.mask) for u in account_body.users]
+    users = [core.AccountUser(name=u.name, mask=u.mask, order=i) for i, u in enumerate(account_body.users)]
     account = core.Account(name=account_body.name, users=users, owner_id=auth_user.id)
 
     db.add(account)
@@ -141,7 +140,8 @@ async def upsert_account(
 
     if not account:
         # account doesn't exist => create it with provided public id
-        users = [core.AccountUser(pub_id=u.id, name=u.name, mask=u.mask) for u in account_body.users]
+        users = [core.AccountUser(pub_id=u.id, name=u.name, mask=u.mask, order=i) for i, u in
+                 enumerate(account_body.users)]
         account = core.Account(pub_id=id, name=account_body.name, users=users, owner_id=auth_user.id)
 
         db.add(account)
@@ -160,18 +160,20 @@ async def upsert_account(
     old_users = {u.pub_id: u for u in account.users}
     new_users_by_id = {u.id: u for u in account_body.users}
 
-    for uid, new_user in new_users_by_id.items():
+    for i, (uid, new_user) in enumerate(new_users_by_id.items()):
         # iterate through account users to update or create
         if uid in old_users:
             # update name and mask
             old_users[uid].name = new_user.name
             old_users[uid].mask = new_user.mask
+            old_users[uid].order = i
         else:
             db.add(core.AccountUser(
                 pub_id=uid,
                 name=new_user.name,
                 mask=new_user.mask,
-                account_id=account.id
+                account_id=account.id,
+                order=i
             ))
 
     for uid, old_user in old_users.items():
