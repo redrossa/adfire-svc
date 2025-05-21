@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date
 from typing import TYPE_CHECKING, Optional
 
 from nanoid import generate
@@ -17,6 +17,8 @@ class Transaction(CoreBase, table=True):
     id: int = Field(primary_key=True)
     pub_id: str = Field(index=True, unique=True, default_factory=generate)
     name: str
+    date: date
+    amount: float
 
     entries: list['TransactionEntry'] = Relationship(back_populates='transaction', cascade_delete=True)
 
@@ -28,7 +30,7 @@ class TransactionEntry(CoreBase, table=True):
 
     id: int = Field(primary_key=True)
     pub_id: str = Field(index=True, unique=True, default_factory=generate)
-    date: datetime
+    date: date
     amount: float
 
     transaction_id: int = Field(foreign_key=f'{SCHEMA_NAME}.transaction.id', ondelete='CASCADE')
