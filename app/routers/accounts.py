@@ -36,7 +36,7 @@ class AccountBody(ApiBase):
         return self
 
 
-class AccountBodyUpdate(AccountBody):
+class AccountUpdateBody(AccountBody):
     users: list[AccountUser] = Field(min_length=1)
 
     @model_validator(mode='after')
@@ -60,7 +60,9 @@ async def get_accounts(
         include_merchants: bool = False,
 ):
     """Returns all accounts belonging to user"""
-    stmt = select(core.Account).where(core.Account.owner_id == auth_user.id)
+    stmt = (select(core.Account)
+            .order_by(core.Account.name)
+            .where(core.Account.owner_id == auth_user.id))
 
     if not include_merchants:
         stmt = stmt.where(core.Account.is_merchant == False)
@@ -108,7 +110,7 @@ async def create_account(
 ):
     """Creates a new account for this user"""
     users = [core.AccountUser(name=u.name, mask=u.mask, order=i) for i, u in enumerate(account_body.users)]
-    account = core.Account(name=account_body.name, users=users, owner_id=auth_user.id)
+    account = core.Account(name=account_body.name, is_merchant=account_body.is_merchant, users=users, owner_id=auth_user.id)
 
     db.add(account)
     db.commit()
@@ -124,7 +126,7 @@ async def create_account(
 @routers.put('/{id}', response_model=Account)
 async def upsert_account(
         id: str,
-        account_body: AccountBodyUpdate,
+        account_body: AccountUpdateBody,
         db: DBSessionDep,
         auth_user: AuthUserDep
 ):
@@ -142,7 +144,7 @@ async def upsert_account(
         # account doesn't exist => create it with provided public id
         users = [core.AccountUser(pub_id=u.id, name=u.name, mask=u.mask, order=i) for i, u in
                  enumerate(account_body.users)]
-        account = core.Account(pub_id=id, name=account_body.name, users=users, owner_id=auth_user.id)
+        account = core.Account(pub_id=id, is_merchant=account_body.is_merchant, name=account_body.name, users=users, owner_id=auth_user.id)
 
         db.add(account)
         db.commit()
@@ -156,6 +158,7 @@ async def upsert_account(
 
     # account exists => replace it
     account.name = account_body.name
+    account.is_merchant = account_body.is_merchant
 
     old_users = {u.pub_id: u for u in account.users}
     new_users_by_id = {u.id: u for u in account_body.users}
