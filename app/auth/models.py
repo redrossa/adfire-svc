@@ -1,12 +1,8 @@
 from datetime import datetime
 
-from sqlmodel import SQLModel, Field, Relationship
+from sqlmodel import Field, Relationship
 
-SCHEMA_NAME = 'authjs'
-
-
-class AuthBase(SQLModel):
-    __table_args__ = {'schema': SCHEMA_NAME}
+from app.base.models import AuthBase
 
 
 class AuthUser(AuthBase, table=True):
@@ -37,7 +33,7 @@ class AuthAccount(AuthBase, table=True):
     id_token: str | None
     session_state: str | None
 
-    user_id: str = Field(foreign_key=f'{SCHEMA_NAME}.user.id', ondelete='RESTRICT')
+    user_id: str = Field(foreign_key='authjs.user.id', ondelete='RESTRICT')
     user: AuthUser = Relationship(back_populates='accounts')
 
 
@@ -48,7 +44,7 @@ class AuthSession(AuthBase, table=True):
     session_token: str
     expires: datetime
 
-    user_id: str = Field(foreign_key=f'{SCHEMA_NAME}.user.id', ondelete='RESTRICT')
+    user_id: str = Field(foreign_key='authjs.user.id', ondelete='RESTRICT')
     user: AuthUser = Relationship(back_populates='sessions')
 
 

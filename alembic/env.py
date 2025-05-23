@@ -18,8 +18,9 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-from app.models.auth import *
-from app.models.core import *
+from app.accounts.models import *
+from app.auth.models import *
+from app.base.models import *
 from sqlmodel import SQLModel
 target_metadata = SQLModel.metadata
 

@@ -8,13 +8,12 @@ from sqlalchemy_utils import create_database, database_exists, drop_database
 from sqlmodel import Session, SQLModel, create_engine
 from starlette.testclient import TestClient
 
+from app.auth.models import AuthSession, AuthUser
+from app.base.models import AuthBase, CoreBase
 from app.config import get_settings
 from app.deps import get_db_session
 from app.main import app
-from app.models import auth, core
-from app.models.auth import SCHEMA_NAME as AUTH_SCHEMA_NAME
-from app.models.cookies import Cookies
-from app.models.core import SCHEMA_NAME as CORE_SCHEMA_NAME
+from app.deps import Cookies
 
 
 def pytest_configure(config):
@@ -33,7 +32,7 @@ def cookies(session_token: str):
 
 @pytest.fixture
 def auth_user():
-    return auth.AuthUser(
+    return AuthUser(
         id='redrossa-user',
         name='redrossa',
         email='redrossa@adfire.com',
@@ -41,8 +40,8 @@ def auth_user():
 
 
 @pytest.fixture
-def auth_session(session_token: str, auth_user: auth.AuthUser):
-    return auth.AuthSession(
+def auth_session(session_token: str, auth_user: AuthUser):
+    return AuthSession(
         id='redrossa-session',
         session_token=session_token,
         expires=datetime.now() + timedelta(hours=12),
@@ -51,7 +50,7 @@ def auth_session(session_token: str, auth_user: auth.AuthUser):
 
 
 @pytest.fixture
-def session(auth_session: auth.AuthSession):
+def session(auth_session: AuthSession):
     settings = get_settings()
 
     if database_exists(settings.database_url):
@@ -59,8 +58,8 @@ def session(auth_session: auth.AuthSession):
 
     create_database(settings.database_url)
 
-    event.listen(auth.AuthBase.metadata, 'before_create', CreateSchema(AUTH_SCHEMA_NAME))
-    event.listen(core.CoreBase.metadata, 'before_create', CreateSchema(CORE_SCHEMA_NAME))
+    event.listen(AuthBase.metadata, 'before_create', CreateSchema('authjs', if_not_exists=True))
+    event.listen(CoreBase.metadata, 'before_create', CreateSchema('core', if_not_exists=True))
 
     engine = create_engine(settings.database_url)
     SQLModel.metadata.create_all(engine)

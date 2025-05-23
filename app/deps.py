@@ -1,14 +1,17 @@
 from typing import Annotated
 
 from fastapi import Cookie, HTTPException, Depends
+from pydantic import BaseModel
 from sqlmodel import Session, select
 from sqlmodel import create_engine
 from starlette.status import HTTP_401_UNAUTHORIZED
 
+from app.auth.models import AuthSession, AuthUser
 from app.config import get_settings
-from app.models import auth
-from app.models.auth import AuthUser
-from app.models.cookies import Cookies
+
+
+class Cookies(BaseModel):
+    session_token: str = Cookie(alias='authjs.session-token')
 
 
 def get_cookies(cookies: Annotated[Cookies, Cookie()]):
@@ -23,14 +26,15 @@ def get_db_session():
     with Session(engine) as session:
         yield session
 
+
 DBSessionDep = Annotated[Session, Depends(get_db_session)]
 
 
 def get_auth_user(db: DBSessionDep, cookies: CookiesDep):
     result = db.exec(
-        select(auth.AuthSession, auth.AuthUser)
-        .join(auth.AuthUser)
-        .where(auth.AuthSession.session_token == cookies.session_token)
+        select(AuthSession, AuthUser)
+        .join(AuthUser)
+        .where(AuthSession.session_token == cookies.session_token)
     ).one_or_none()
 
     if not result:
