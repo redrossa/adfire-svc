@@ -12,7 +12,7 @@ def map_entry(e: TransactionEntry) -> TransactionEntryRead:
         id=e.pub_id,
         date=e.date,
         amount=abs(e.amount),
-        account_user_id=e.account_user.pub_id
+        account_user_id=None if not e.account_user else e.account_user.pub_id
     )
 
 
@@ -61,8 +61,7 @@ def get_transaction_by_id(db: Session, auth_user: AuthUser, id: str) -> Transact
 
 
 def create_transaction(db: Session, auth_user: AuthUser, transaction: TransactionCreate) -> TransactionRead:
-    account_user_pub_ids = [e.account_user_id for e in transaction.debits + transaction.credits if
-                            e.account_user_id is not None]
+    account_user_pub_ids = [e.account_user_id for e in transaction.debits + transaction.credits]
     id_map = get_account_users_pub_id_to_id_map(db, auth_user, account_user_pub_ids)
 
     debits = [TransactionEntry(
@@ -144,9 +143,9 @@ def upsert_transaction(
         transaction: TransactionUpdate
 ) -> TransactionRead:
     transaction_raw = get_raw_transaction_or_none_by_id(db, auth_user, id)
-    return create_transaction(db, auth_user, transaction) if not transaction_raw else update_transaction(db, auth_user,
-                                                                                                         transaction_raw,
-                                                                                                         transaction)
+    return create_transaction(db, auth_user, transaction) \
+        if not transaction_raw \
+        else update_transaction(db, auth_user, transaction_raw, transaction)
 
 
 def delete_transaction(db: Session, auth_user: AuthUser, id: str):

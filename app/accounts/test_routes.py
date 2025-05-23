@@ -1,23 +1,9 @@
-import pytest
 from starlette.status import HTTP_200_OK, HTTP_404_NOT_FOUND, HTTP_409_CONFLICT, HTTP_201_CREATED, \
     HTTP_422_UNPROCESSABLE_ENTITY
 from starlette.testclient import TestClient
 
 from app.accounts.models import AccountRead
 from app.auth.models import AuthUser
-
-
-@pytest.fixture
-def account():
-    return {
-        'name': 'Chase Freedom Unlimited',
-        'users': [
-            {
-                'name': 'John Doe',
-                'mask': '0000'
-            }
-        ]
-    }
 
 
 def assert_account(actual, expected):
@@ -29,7 +15,7 @@ def assert_account(actual, expected):
         assert a_u['mask'] == e_u['mask']
         assert a_u['name'] == e_u['name']
 
-    assert AccountRead.model_validate(actual)
+    AccountRead.model_validate(actual)
 
 
 class TestGetAll:
@@ -47,9 +33,7 @@ class TestGetAll:
 
         assert response.status_code == HTTP_200_OK
         assert len(data) == 1
-
-        for x in data:
-            assert_account(x, account)
+        assert_account(data[0], account)
 
 
 class TestGet:

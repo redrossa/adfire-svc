@@ -1,4 +1,5 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
+from starlette.status import HTTP_201_CREATED
 
 from app.deps import DBSessionDep, AuthUserDep
 from app.transactions.models import TransactionRead, TransactionCreate, TransactionUpdate
@@ -30,14 +31,17 @@ async def get(
     return get_transaction_by_id(db, auth_user, id)
 
 
-@router.post('/')
+@router.post('/', status_code=HTTP_201_CREATED)
 async def create(
         db: DBSessionDep,
         auth_user: AuthUserDep,
-        body: TransactionCreate
+        body: TransactionCreate,
+        response: Response
 ) -> TransactionRead:
     """Creates a new transaction for `auth_user`."""
-    return create_transaction(db, auth_user, body)
+    data = create_transaction(db, auth_user, body)
+    response.headers['Location'] = f'{router.prefix}/{data.id}'
+    return data
 
 
 @router.put('/{id}')

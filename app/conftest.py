@@ -11,9 +11,9 @@ from starlette.testclient import TestClient
 from app.auth.models import AuthSession, AuthUser
 from app.base.models import AuthBase, CoreBase
 from app.config import get_settings
+from app.deps import Cookies
 from app.deps import get_db_session
 from app.main import app
-from app.deps import Cookies
 
 
 def pytest_configure(config):
@@ -83,3 +83,35 @@ def client(session: Session, cookies: Cookies):
     yield client
 
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def account():
+    return {
+        'name': 'Chase Freedom Unlimited',
+        'users': [
+            {
+                'name': 'John Doe',
+                'mask': '0000'
+            }
+        ]
+    }
+
+
+@pytest.fixture
+def transaction():
+    return {
+        'name': 'Groceries',
+        'debits': [
+            {
+                'amount': 100,
+                'date': '2025-05-02'
+            }
+        ],
+        'credits': [
+            {
+                'amount': 100,
+                'date': '2025-05-02'
+            }
+        ]
+    }

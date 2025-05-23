@@ -45,7 +45,7 @@ class TransactionEntry(CoreBase, table=True):
 class TransactionEntryBase(RouteBase):
     date: date
     amount: PositiveFloat
-    account_user_id: str | None
+    account_user_id: str | None = None
 
 
 class TransactionBase(RouteBase):

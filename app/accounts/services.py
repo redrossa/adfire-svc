@@ -39,7 +39,12 @@ def get_account_users_pub_id_to_id_map(db: Session, auth_user: AuthUser, ids: li
 
     results = db.exec(statement).all()
 
-    return {pub_id: id for id, pub_id in results}
+    id_map = {pub_id: id for id, pub_id in results}
+    for x in ids:
+        if x not in id_map:
+            id_map[x] = None
+
+    return id_map
 
 
 def get_account_by_id_stmt(auth_user: AuthUser, id: str, include_merchants: bool = False) -> SelectBase[Account]:

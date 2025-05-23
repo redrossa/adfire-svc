@@ -42,7 +42,7 @@ async def create(
 ) -> AccountRead:
     """Creates a new account for `auth_user`."""
     data = create_account(db, auth_user, body)
-    response.headers['Location'] = f'/accounts/{data.id}'
+    response.headers['Location'] = f'{router.prefix}/{data.id}'
     return data
 
 
@@ -61,7 +61,7 @@ async def upsert(
         return data
 
     response.status_code = HTTP_201_CREATED
-    response.headers['Location'] = f'/accounts/{data.id}'
+    response.headers['Location'] = f'{router.prefix}/{data.id}'
     return data
 
 
