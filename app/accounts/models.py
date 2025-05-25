@@ -6,7 +6,7 @@ from sqlalchemy import UniqueConstraint
 from sqlalchemy.orm import declared_attr
 from sqlmodel import Field, Relationship
 
-from app.base.models import CoreBase, RouteBase
+from app.base.models import CoreBase, RouteBase, TimeSeriesPoint
 from app.base.services import table_args
 from app.transactions.models import TransactionEntry
 
@@ -94,3 +94,12 @@ class AccountUserRead(AccountUserUpdate):
 class AccountRead(AccountUpdate):
     id: str
     users: list[AccountUserRead]
+
+
+class AccountUserBalanceRead(AccountUserRead):
+    balances: list[TimeSeriesPoint]
+
+
+class AccountBalanceRead(AccountRead):
+    balances: list[TimeSeriesPoint]
+    users: list[AccountUserBalanceRead]

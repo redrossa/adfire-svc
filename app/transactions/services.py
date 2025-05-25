@@ -1,10 +1,18 @@
+from itertools import groupby
+from operator import attrgetter
+from typing import TYPE_CHECKING
+
 from sqlalchemy.orm import joinedload
 from sqlmodel import select, Session
 
-from app.accounts.services import get_account_users_pub_id_to_id_map
 from app.auth.models import AuthUser
+from app.base.models import TimeSeriesPoint
 from app.transactions.models import Transaction, TransactionEntry, TransactionRead, TransactionCreate, \
     TransactionEntryRead, TransactionUpdate, TransactionEntryUpdate
+
+
+if TYPE_CHECKING:
+    from app.accounts.services import get_account_users_pub_id_to_id_map
 
 
 def map_entry(e: TransactionEntry) -> TransactionEntryRead:
@@ -156,3 +164,10 @@ def delete_transaction(db: Session, auth_user: AuthUser, id: str):
     transaction_raw = get_raw_transaction_by_id(db, auth_user, id)
     db.delete(transaction_raw)
     db.commit()
+
+
+def aggregate_entries(sorted_entries: list[TransactionEntry]) -> list[TimeSeriesPoint]:
+    return [TimeSeriesPoint(
+        amount=sum(x.amount for x in group),
+        date=key
+    ) for key, group in groupby(sorted_entries, key=attrgetter('date'))]

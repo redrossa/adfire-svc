@@ -1,8 +1,13 @@
+from operator import attrgetter
+
 from sqlalchemy import SelectBase
+from sqlalchemy.orm import selectinload
 from sqlmodel import select, Session
 
-from app.accounts.models import Account, AccountRead, AccountUserRead, AccountCreate, AccountUser, AccountUpdate
+from app.accounts.models import Account, AccountRead, AccountUserRead, AccountCreate, AccountUser, AccountUpdate, \
+    AccountBalanceRead, AccountUserBalanceRead
 from app.auth.models import AuthUser
+from app.transactions.services import aggregate_entries
 
 
 def map_account(account: Account) -> AccountRead:
@@ -62,7 +67,8 @@ def get_raw_account_by_id(db: Session, auth_user: AuthUser, id: str, include_mer
     return db.exec(get_account_by_id_stmt(auth_user, id, include_merchants)).one()
 
 
-def get_raw_account_or_none_by_id(db: Session, auth_user: AuthUser, id: str, include_merchants: bool = False) -> Account | None:
+def get_raw_account_or_none_by_id(db: Session, auth_user: AuthUser, id: str,
+                                  include_merchants: bool = False) -> Account | None:
     return db.exec(get_account_by_id_stmt(auth_user, id, include_merchants)).one_or_none()
 
 
@@ -116,10 +122,43 @@ def update_account(db: Session, account: Account, account_in: AccountUpdate) -> 
 
 def upsert_account(db: Session, auth_user: AuthUser, id: str, account: AccountUpdate) -> (AccountRead, bool):
     account_raw = get_raw_account_or_none_by_id(db, auth_user, id, include_merchants=True)
-    return (create_account(db, auth_user, account, id=id), True) if not account_raw else (update_account(db, account_raw, account), False)
+    return (create_account(db, auth_user, account, id=id), True) if not account_raw else (
+        update_account(db, account_raw, account), False)
 
 
 def delete_account(db: Session, auth_user: AuthUser, id: str):
     account_raw = get_raw_account_by_id(db, auth_user, id, include_merchants=True)
     db.delete(account_raw)
     db.commit()
+
+
+def get_account_balances(
+        db: Session,
+        auth_user: AuthUser,
+        id: str,
+        include_merchants: bool = False
+) -> AccountBalanceRead:
+    stmt = get_account_by_id_stmt(auth_user, id, include_merchants)
+    stmt = stmt.options(
+        selectinload(Account.users)
+        .selectinload(AccountUser.entries)
+    )
+
+    account = db.exec(stmt).one()
+    account_balances = aggregate_entries(
+        sorted((e for users in account.users for e in users.entries), key=attrgetter('date'), reverse=True)
+    )
+    users = [AccountUserBalanceRead(
+        id=u.pub_id,
+        name=u.name,
+        mask=u.mask,
+        balances=aggregate_entries(sorted((e for e in u.entries), key=attrgetter('date'), reverse=True))
+    ) for u in account.users]
+
+    return AccountBalanceRead(
+        id=account.pub_id,
+        name=account.name,
+        is_merchant=account.is_merchant,
+        balances=account_balances,
+        users=users
+    )

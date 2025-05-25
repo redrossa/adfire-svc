@@ -20,7 +20,8 @@ class Transaction(CoreBase, table=True):
     date: date
     amount: float
 
-    entries: list['TransactionEntry'] = Relationship(back_populates='transaction', cascade_delete=True)
+    entries: list['TransactionEntry'] = Relationship(back_populates='transaction', cascade_delete=True,
+                                                     sa_relationship_kwargs={'order_by': 'TransactionEntry.date'})
 
     owner_id: str = Field(foreign_key='authjs.user.id', ondelete='CASCADE')
 

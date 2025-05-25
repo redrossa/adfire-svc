@@ -1,7 +1,10 @@
+from datetime import date
+
+from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic.alias_generators import to_camel
-from pydantic import BaseModel
 from sqlmodel import SQLModel
+
 
 class CoreBase(SQLModel):
     __table_args__ = {'schema': 'core'}
@@ -16,3 +19,8 @@ class RouteBase(BaseModel):
         from_attributes=True,
         extra='forbid'
     )
+
+
+class TimeSeriesPoint(RouteBase):
+    date: date
+    amount: float
