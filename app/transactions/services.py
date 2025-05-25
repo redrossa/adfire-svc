@@ -4,7 +4,7 @@ from sqlmodel import select, Session
 from app.accounts.services import get_account_users_pub_id_to_id_map
 from app.auth.models import AuthUser
 from app.transactions.models import Transaction, TransactionEntry, TransactionRead, TransactionCreate, \
-    TransactionEntryRead, TransactionUpdate
+    TransactionEntryRead, TransactionUpdate, TransactionEntryUpdate
 
 
 def map_entry(e: TransactionEntry) -> TransactionEntryRead:
@@ -105,28 +105,32 @@ def update_transaction(
     transaction.amount = sum(e.amount for e in transaction_in.credits)
 
     old_entries = {e.pub_id: e for e in transaction.entries}
-    new_entries_by_id = {e.id: [e, False] for e in transaction_in.debits}
-    new_entries_by_id |= {e.id: [e, True] for e in transaction_in.credits}
+    new_entry_ids = set()
 
-    for i, (eid, [new_entry, is_credit]) in enumerate(new_entries_by_id.items()):
-        # iterate through account users to update or create
-        if eid in old_entries:
-            # update name and mask
-            old_entries[eid].date = new_entry.date
-            old_entries[eid].amount = new_entry.amount if is_credit else -new_entry.amount
-            old_entries[eid].account_user_id = id_map.get(new_entry.account_user_id, None)
-        else:
-            db.add(TransactionEntry(
-                pub_id=eid,
-                date=new_entry.date,
-                amount=new_entry.amount if is_credit else -new_entry.amount,
-                transaction_id=transaction.id,
-                account_user_id=id_map.get(new_entry.account_user_id, None),
-            ))
+    def iterate_incoming_entries(entries: list[TransactionEntryUpdate], is_credit: bool):
+        for e in entries:
+            # iterate to update or create entries
+            if e.id in old_entries:
+                # update name and mask
+                old_entries[e.id].date = e.date
+                old_entries[e.id].amount = e.amount if is_credit else -e.amount
+                old_entries[e.id].account_user_id = id_map.get(e.account_user_id, None)
+            else:
+                db.add(TransactionEntry(
+                    pub_id=e.id,
+                    date=e.date,
+                    amount=e.amount if is_credit else -e.amount,
+                    transaction_id=transaction.id,
+                    account_user_id=id_map.get(e.account_user_id, None),
+                ))
+            new_entry_ids.add(e.id)
+
+    iterate_incoming_entries(transaction_in.debits, False)
+    iterate_incoming_entries(transaction_in.credits, True)
 
     for eid, old_entry in old_entries.items():
-        # iterate through account users to update or delete
-        if eid not in new_entries_by_id:
+        # iterate to delete entries
+        if eid not in new_entry_ids:
             db.delete(old_entry)
 
     db.add(transaction)
