@@ -114,20 +114,20 @@ def update_transaction(
             # update name and mask
             old_entries[eid].date = new_entry.date
             old_entries[eid].amount = new_entry.amount if is_credit else -new_entry.amount
-            old_entries[eid].account_user_id = id_map[new_entry.account_user_id]
+            old_entries[eid].account_user_id = id_map.get(new_entry.account_user_id, None)
         else:
             db.add(TransactionEntry(
                 pub_id=eid,
                 date=new_entry.date,
                 amount=new_entry.amount if is_credit else -new_entry.amount,
                 transaction_id=transaction.id,
-                account_user_id=id_map[new_entry.account_user_id],
+                account_user_id=id_map.get(new_entry.account_user_id, None),
             ))
 
     for eid, old_entry in old_entries.items():
         # iterate through account users to update or delete
         if eid not in new_entries_by_id:
-            db.delete_account(old_entry)
+            db.delete(old_entry)
 
     db.add(transaction)
     db.commit()

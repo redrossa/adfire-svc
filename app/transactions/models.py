@@ -62,7 +62,7 @@ class TransactionCreate(TransactionBase):
 
 
 class TransactionEntryUpdate(TransactionEntryCreate):
-    id: str
+    id: str | None = None
 
 
 class TransactionUpdate(TransactionCreate):
