@@ -94,3 +94,48 @@ class TestCreate:
         assert response.status_code == HTTP_201_CREATED
         assert response.headers['Location'] == f'/transactions/{data['id']}'
         assert_transaction(data, transaction)
+
+
+class TestUpdate:
+    def test_update_update_entry_amounts(self, client: TestClient, auth_user: AuthUser, transaction):
+        response = client.post('/transactions', json=transaction)
+        data = response.json()
+        data['debits'][0]['amount'] = 200
+        data['credits'][0]['amount'] = 200
+        del data['id']
+        del data['date']
+        del data['amount']
+        response = client.put(response.headers['Location'], json=data)
+        data2 = response.json()
+
+        assert response.status_code == HTTP_200_OK
+        assert_transaction(data2, data)
+
+    def test_update_add_entry(self, client: TestClient, auth_user: AuthUser, transaction):
+        response = client.post('/transactions', json=transaction)
+        data = response.json()
+        data['debits'][0]['amount'] *= 2
+        data['credits'].append({'amount': data['credits'][0]['amount'], 'date': data['credits'][0]['date']})
+        del data['id']
+        del data['date']
+        del data['amount']
+        response = client.put(response.headers['Location'], json=data)
+        data2 = response.json()
+
+        assert response.status_code == HTTP_200_OK
+        assert_transaction(data2, data)
+
+    def test_update_change_entry_account_user(self, client: TestClient, auth_user: AuthUser, transaction, init_accounts):
+        response = client.get('/accounts')
+        accounts = response.json()
+        response = client.post('/transactions', json=transaction)
+        data = response.json()
+        data['credits'][0]['accountUserId'] = accounts[0]['users'][0]['id']
+        del data['id']
+        del data['date']
+        del data['amount']
+        response = client.put(response.headers['Location'], json=data)
+        data2 = response.json()
+
+        assert response.status_code == HTTP_200_OK
+        assert_transaction(data2, data)
