@@ -162,8 +162,14 @@ def delete_transaction(db: Session, auth_user: AuthUser, id: str):
     db.commit()
 
 
-def aggregate_entries(sorted_entries: list[TransactionEntry]) -> list[TimeSeriesPoint]:
-    return [TimeSeriesPoint(
-        amount=sum(x.amount for x in group),
-        date=key
-    ) for key, group in groupby(sorted_entries, key=attrgetter('date'))]
+def aggregate_entries(asc_entries: list[TransactionEntry]) -> list[TimeSeriesPoint]:
+    agg = []
+    for date, entries in groupby(asc_entries, key=attrgetter('date')):
+        curr_amount = sum(e.amount for e in entries)
+        prev_cum = agg[-1].cumulative if agg else 0
+        agg.append(TimeSeriesPoint(
+            date=date,
+            amount=curr_amount,
+            cumulative=prev_cum + curr_amount
+        ))
+    return agg

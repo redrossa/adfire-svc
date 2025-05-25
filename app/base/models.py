@@ -24,3 +24,4 @@ class RouteBase(BaseModel):
 class TimeSeriesPoint(RouteBase):
     date: date
     amount: float
+    cumulative: float

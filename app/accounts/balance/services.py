@@ -24,13 +24,13 @@ def get_account_balance(
 
     account = db.exec(stmt).one()
     account_balances = aggregate_entries(
-        sorted((e for users in account.users for e in users.entries), key=attrgetter('date'), reverse=True)
+        sorted((e for users in account.users for e in users.entries), key=attrgetter('date'))
     )
     users = [AccountUserBalanceRead(
         id=u.pub_id,
         name=u.name,
         mask=u.mask,
-        balances=aggregate_entries(sorted((e for e in u.entries), key=attrgetter('date'), reverse=True))
+        balances=aggregate_entries(sorted((e for e in u.entries), key=attrgetter('date')))
     ) for u in account.users]
 
     return AccountBalanceRead(

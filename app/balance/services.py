@@ -24,9 +24,6 @@ def get_balances(db: Session, auth_user: AuthUser, ) -> Balance:
 
     return Balance(
         balances=aggregate_entries(
-            sorted(
-                (e for a in accounts for u in a.users for e in u.entries),
-                key=attrgetter('date'), reverse=True
-            )
+            sorted((e for a in accounts for u in a.users for e in u.entries), key=attrgetter('date'))
         )
     )
