@@ -94,12 +94,3 @@ class AccountUserRead(AccountUserUpdate):
 class AccountRead(AccountUpdate):
     id: str
     users: list[AccountUserRead]
-
-
-class AccountUserBalanceRead(AccountUserRead):
-    balances: list[TimeSeriesPoint]
-
-
-class AccountBalanceRead(AccountRead):
-    balances: list[TimeSeriesPoint]
-    users: list[AccountUserBalanceRead]

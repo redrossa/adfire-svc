@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Response
 from starlette.status import HTTP_201_CREATED
 
-from app.accounts.models import AccountRead, AccountCreate, AccountUpdate, AccountBalanceRead
+from app.accounts.balance.models import AccountBalanceRead
+from app.accounts.balance.services import get_account_balance
+from app.accounts.models import AccountRead, AccountCreate, AccountUpdate
 from app.accounts.services import get_all_accounts, get_account_by_id, create_account, delete_account, \
-    get_raw_account_or_none_by_id, update_account, upsert_account, get_account_balances
+    upsert_account
 from app.deps import DBSessionDep, AuthUserDep
 
 router = APIRouter(
@@ -75,11 +77,11 @@ async def delete(
     delete_account(db, auth_user, id)
 
 
-@router.get('/{id}/balances')
+@router.get('/{id}/balance')
 async def get_balances(
         db: DBSessionDep,
         auth_user: AuthUserDep,
         id: str,
-) -> None:
+) -> AccountBalanceRead:
     """Returns account with `id` including its balance series from `auth_user`."""
-    return get_account_balances(db, auth_user, id)
+    return get_account_balance(db, auth_user, id)

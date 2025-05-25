@@ -1,18 +1,14 @@
 from itertools import groupby
 from operator import attrgetter
-from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import joinedload
 from sqlmodel import select, Session
 
+from app.accounts.services import get_account_users_pub_id_to_id_map
 from app.auth.models import AuthUser
 from app.base.models import TimeSeriesPoint
 from app.transactions.models import Transaction, TransactionEntry, TransactionRead, TransactionCreate, \
     TransactionEntryRead, TransactionUpdate, TransactionEntryUpdate
-
-
-if TYPE_CHECKING:
-    from app.accounts.services import get_account_users_pub_id_to_id_map
 
 
 def map_entry(e: TransactionEntry) -> TransactionEntryRead:
