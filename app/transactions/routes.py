@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Response
+from fastapi.params import Query
 from starlette.status import HTTP_201_CREATED
 
 from app.deps import DBSessionDep, AuthUserDep
 from app.transactions.models import TransactionRead, TransactionCreate, TransactionUpdate
 from app.transactions.services import get_all_transactions, get_transaction_by_id, create_transaction, \
-    upsert_transaction, delete_transaction
+    upsert_transaction, delete_transaction, get_transactions_by_account_id
 
 router = APIRouter(
     prefix='/transactions',
@@ -15,9 +16,13 @@ router = APIRouter(
 @router.get('/')
 async def get_all(
         db: DBSessionDep,
-        auth_user: AuthUserDep
+        auth_user: AuthUserDep,
+        account_id: str | None = Query(None, alias='accountId'),
 ) -> list[TransactionRead]:
     """Returns all transactions from `auth_user`."""
+    if account_id:
+        return get_transactions_by_account_id(db, auth_user, account_id)
+
     return get_all_transactions(db, auth_user)
 
 

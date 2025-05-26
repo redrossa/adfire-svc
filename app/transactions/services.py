@@ -1,6 +1,6 @@
 from itertools import groupby
 from operator import attrgetter
-from typing import Iterable
+from typing import Iterable, TYPE_CHECKING
 
 from sqlalchemy.orm import joinedload
 from sqlmodel import select, Session
@@ -10,6 +10,8 @@ from app.auth.models import AuthUser
 from app.base.models import TimeSeries
 from app.transactions.models import Transaction, TransactionEntry, TransactionRead, TransactionCreate, \
     TransactionEntryRead, TransactionUpdate, TransactionEntryUpdate
+
+from app.accounts.models import AccountUser, Account
 
 
 def map_entry(e: TransactionEntry) -> TransactionEntryRead:
@@ -177,3 +179,19 @@ def aggregate_entries(entries: Iterable[TransactionEntry]) -> list[TimeSeries]:
         ))
 
     return agg
+
+
+def get_transactions_by_account_id(db: Session, auth_user: AuthUser, account_id: str) -> list[TransactionRead]:
+    stmt = (
+        select(Transaction)
+        .order_by(Transaction.date.desc())
+        .join(Transaction.entries)
+        .join(AccountUser)
+        .join(Account)
+        .where(Transaction.owner_id == auth_user.id)
+        .where(Account.pub_id == account_id)
+    )
+
+    transactions = db.exec(stmt).unique().all()
+
+    return [map_transaction(t) for t in transactions]
