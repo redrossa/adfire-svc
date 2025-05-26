@@ -21,7 +21,7 @@ class RouteBase(BaseModel):
     )
 
 
-class TimeSeriesPoint(RouteBase):
+class TimeSeries(RouteBase):
     date: date
     amount: float
     cumulative: float

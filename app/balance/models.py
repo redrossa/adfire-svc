@@ -1,6 +1,6 @@
-from app.base.models import RouteBase, TimeSeriesPoint
+from app.base.models import RouteBase, TimeSeries
 
 
 class Balance(RouteBase):
-    balances: list[TimeSeriesPoint]
+    balances: list[TimeSeries]
 

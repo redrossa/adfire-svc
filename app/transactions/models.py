@@ -5,7 +5,7 @@ from nanoid import generate
 from pydantic import PositiveFloat
 from sqlmodel import Field, Relationship
 
-from app.base.models import CoreBase, RouteBase
+from app.base.models import CoreBase, RouteBase, TimeSeries
 
 if TYPE_CHECKING:
     from app.accounts.models import AccountUser

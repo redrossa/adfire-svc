@@ -6,7 +6,7 @@ from sqlalchemy import UniqueConstraint
 from sqlalchemy.orm import declared_attr
 from sqlmodel import Field, Relationship
 
-from app.base.models import CoreBase, RouteBase, TimeSeriesPoint
+from app.base.models import CoreBase, RouteBase, TimeSeries
 from app.base.services import table_args
 from app.transactions.models import TransactionEntry
 
@@ -19,8 +19,11 @@ class Account(CoreBase, table=True):
     name: str
     is_merchant: bool = Field(default=False)
 
-    users: list['AccountUser'] = Relationship(back_populates='account', cascade_delete=True,
-                                              sa_relationship_kwargs={'order_by': 'AccountUser.order'})
+    users: list['AccountUser'] = Relationship(
+        back_populates='account',
+        cascade_delete=True,
+        sa_relationship_kwargs={'order_by': 'AccountUser.order'}
+    )
 
     owner_id: str = Field(foreign_key='authjs.user.id', ondelete='CASCADE')
 

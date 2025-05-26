@@ -1,12 +1,13 @@
 from itertools import groupby
 from operator import attrgetter
+from typing import Iterable
 
 from sqlalchemy.orm import joinedload
 from sqlmodel import select, Session
 
 from app.accounts.services import get_account_users_pub_id_to_id_map
 from app.auth.models import AuthUser
-from app.base.models import TimeSeriesPoint
+from app.base.models import TimeSeries
 from app.transactions.models import Transaction, TransactionEntry, TransactionRead, TransactionCreate, \
     TransactionEntryRead, TransactionUpdate, TransactionEntryUpdate
 
@@ -162,14 +163,17 @@ def delete_transaction(db: Session, auth_user: AuthUser, id: str):
     db.commit()
 
 
-def aggregate_entries(asc_entries: list[TransactionEntry]) -> list[TimeSeriesPoint]:
+def aggregate_entries(entries: Iterable[TransactionEntry]) -> list[TimeSeries]:
+    asc_entries = sorted((e for e in entries), key=attrgetter('date'))
+
     agg = []
     for date, entries in groupby(asc_entries, key=attrgetter('date')):
         curr_amount = sum(e.amount for e in entries)
         prev_cum = agg[-1].cumulative if agg else 0
-        agg.append(TimeSeriesPoint(
+        agg.append(TimeSeries(
             date=date,
             amount=curr_amount,
             cumulative=prev_cum + curr_amount
         ))
+
     return agg
