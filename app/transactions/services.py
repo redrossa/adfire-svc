@@ -23,12 +23,16 @@ def map_entry(e: TransactionEntry) -> TransactionEntryRead:
     )
 
 
-def map_transaction(transaction: Transaction) -> TransactionRead:
+def map_transaction(transaction: Transaction, amount_relative_to_account: str = None) -> TransactionRead:
     return TransactionRead(
         id=transaction.pub_id,
         name=transaction.name,
         date=min(e.date for e in transaction.entries),
-        amount=sum(e.amount for e in transaction.entries if e.amount > 0),
+        amount=sum(
+            e.amount for e in transaction.entries
+            if not e.account_user.account.is_merchant
+            and (e.account_user.account.pub_id == amount_relative_to_account if amount_relative_to_account else True)
+        ),
         debits=[map_entry(e) for e in transaction.entries if e.amount < 0],
         credits=[map_entry(e) for e in transaction.entries if e.amount >= 0],
     )
@@ -194,4 +198,4 @@ def get_transactions_by_account_id(db: Session, auth_user: AuthUser, account_id:
 
     transactions = db.exec(stmt).unique().all()
 
-    return [map_transaction(t) for t in transactions]
+    return [map_transaction(t, amount_relative_to_account=account_id) for t in transactions]
