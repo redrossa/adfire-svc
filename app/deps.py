@@ -6,7 +6,7 @@ from sqlmodel import Session, select
 from sqlmodel import create_engine
 from starlette.status import HTTP_401_UNAUTHORIZED
 
-from app.auth.models import AuthSession, AuthUser
+from app.models.auth import AuthSession, AuthUser
 from app.config import get_settings
 
 

@@ -1,12 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.accounts.routes import router as accounts_router
-from app.auth.models import AuthUser
-from app.balance.routes import router as balance_router
 from app.deps import AuthUserDep
 from app.errors import add_error_handlers
-from app.transactions.routes import router as transactions_router
+from app.models.auth import AuthUser
+from app.routers.transactions import router as transactions_router
 
 app = FastAPI()
 
@@ -20,9 +18,7 @@ app.add_middleware(
     allow_headers=['*'],
 )
 
-app.include_router(accounts_router)
 app.include_router(transactions_router)
-app.include_router(balance_router)
 
 
 @app.get('/whoami')

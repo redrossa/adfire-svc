@@ -2,7 +2,7 @@ from datetime import datetime
 
 from sqlmodel import Field, Relationship
 
-from app.base.models import AuthBase
+from app.models.base import AuthBase
 
 
 class AuthUser(AuthBase, table=True):

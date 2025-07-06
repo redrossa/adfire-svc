@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from app.auth.models import AuthUser
+from app.models.auth import AuthUser
 
 
 def test_whoami(client: TestClient, auth_user: AuthUser):
