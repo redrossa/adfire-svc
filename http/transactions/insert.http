@@ -1,0 +1,19 @@
+@id = {{$random.internet.domainWord}}
+
+### PUT a new transaction with custom ID
+PUT http://{{host}}:{{port}}/transactions/{{id}}
+Cookie: authjs.session-token={{auth.sessionToken}}
+
+{
+    "name": "Grocery",
+    "date": "2025-06-06",
+    "amount": "46.92",
+    "isCredit": false,
+    "account": "Amex Gold"
+}
+
+> {%
+    client.test('Request executed successfully', () => {
+        client.assert(response.status === 201, 'Response status is not 201');
+    });
+%}

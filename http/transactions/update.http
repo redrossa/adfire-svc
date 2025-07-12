@@ -1,0 +1,34 @@
+### POST a new transaction
+POST http://{{host}}:{{port}}/transactions
+Cookie: authjs.session-token={{auth.sessionToken}}
+
+{
+    "name": "Grocery",
+    "date": "2025-06-06",
+    "amount": 46.92,
+    "isCredit": false,
+    "account": "Amex Gold"
+}
+
+> {%
+    const id = response.body.id;
+    client.global.set('id', id);
+%}
+
+### PUT new data in previous transaction ID
+PUT http://localhost:8000/transactions/{{id}}
+Cookie: authjs.session-token={{auth.sessionToken}}
+
+{
+    "name": "Not Grocery",
+    "date": "2025-06-06",
+    "amount": "101.45",
+    "isCredit": true,
+    "account": "Amex Gold"
+}
+
+> {%
+    client.test('Request executed successfully', () => {
+        client.assert(response.status === 200, 'Response status is not 200');
+    });
+%}

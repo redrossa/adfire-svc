@@ -1,0 +1,26 @@
+### POST a new transaction
+POST http://{{host}}:{{port}}/transactions
+Cookie: authjs.session-token={{auth.sessionToken}}
+
+{
+    "name": "Grocery",
+    "date": "2025-06-06",
+    "amount": 46.92,
+    "isCredit": false,
+    "account": "Amex Gold"
+}
+
+> {%
+    const id = response.body.id;
+    client.global.set('id', id);
+%}
+
+### DELETE a transaction
+DELETE http://{{host}}:{{port}}/transactions/{{id}}
+Cookie: authjs.session-token={{auth.sessionToken}}
+
+> {%
+    client.test('Request executed successfully', () => {
+        client.assert(response.status === 200, 'Response status is not 200');
+    });
+%}
